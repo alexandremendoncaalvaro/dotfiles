@@ -10,6 +10,8 @@ O programa organiza configurações em **módulos** independentes, filtrados por
 |--------|------|-----------------|
 | `starship` | shell | Instala o prompt [Starship](https://starship.rs), cria symlink do config e adiciona init ao `.bashrc`/`.zshrc` |
 | `cedilla-fix` | desktop | Corrige cedilha no Bluefin (Wayland/GNOME) via `~/.XCompose` |
+| `gnome-forge` | desktop | Auto-tiling com [Forge](https://github.com/forge-ext/forge). Super+setas (foco), Super+Shift (mover), Super+Ctrl (resize) |
+| `gnome-focus-mode` | desktop | F11 = fullscreen + workspace exclusivo (estilo macOS). Extensão GNOME Shell própria |
 | `bluefin-update` | system | Atualiza rpm-ostree, Flatpak, firmware (fwupd) e Distrobox |
 
 ### Perfis

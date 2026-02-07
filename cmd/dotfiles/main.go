@@ -11,6 +11,8 @@ import (
 	"github.com/ale/dotfiles/internal/module"
 	"github.com/ale/dotfiles/internal/modules/bluefin_update"
 	"github.com/ale/dotfiles/internal/modules/cedilla"
+	"github.com/ale/dotfiles/internal/modules/gnome_focus"
+	"github.com/ale/dotfiles/internal/modules/gnome_forge"
 	"github.com/ale/dotfiles/internal/modules/starship"
 	"github.com/ale/dotfiles/internal/system"
 )
@@ -28,6 +30,11 @@ func main() {
 	configSource := filepath.Join(repoDir, "configs", "starship.toml")
 	must(reg.Register(starship.New(configSource)))
 	must(reg.Register(cedilla.New()))
+	must(reg.Register(gnome_forge.New()))
+
+	focusExtSource := filepath.Join(repoDir, "configs", "gnome-extensions", "focus-mode@dotfiles")
+	must(reg.Register(gnome_focus.New(focusExtSource)))
+
 	must(reg.Register(bluefin_update.New()))
 
 	// Configura a app
