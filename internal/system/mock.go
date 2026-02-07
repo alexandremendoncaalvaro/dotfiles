@@ -34,6 +34,15 @@ type Mock struct {
 
 	// ExecLog registra todos os comandos executados
 	ExecLog []string
+
+	// WriteFileErr faz WriteFile retornar esse erro (se nao nil)
+	WriteFileErr error
+
+	// MkdirAllErr faz MkdirAll retornar esse erro (se nao nil)
+	MkdirAllErr error
+
+	// SymlinkErr faz Symlink retornar esse erro (se nao nil)
+	SymlinkErr error
 }
 
 // ExecResult armazena o resultado simulado de um comando.
@@ -82,8 +91,13 @@ func (m *Mock) ExecStream(_ context.Context, callback func(line string), name st
 }
 
 func (m *Mock) FileExists(path string) bool {
-	_, ok := m.Files[path]
-	return ok
+	if _, ok := m.Files[path]; ok {
+		return true
+	}
+	if _, ok := m.Symlinks[path]; ok {
+		return true
+	}
+	return false
 }
 
 func (m *Mock) ReadFile(path string) ([]byte, error) {
@@ -95,15 +109,24 @@ func (m *Mock) ReadFile(path string) ([]byte, error) {
 }
 
 func (m *Mock) WriteFile(path string, data []byte, _ os.FileMode) error {
+	if m.WriteFileErr != nil {
+		return m.WriteFileErr
+	}
 	m.Files[path] = data
 	return nil
 }
 
 func (m *Mock) MkdirAll(_ string, _ os.FileMode) error {
+	if m.MkdirAllErr != nil {
+		return m.MkdirAllErr
+	}
 	return nil
 }
 
 func (m *Mock) Symlink(oldname, newname string) error {
+	if m.SymlinkErr != nil {
+		return m.SymlinkErr
+	}
 	m.Symlinks[newname] = oldname
 	return nil
 }

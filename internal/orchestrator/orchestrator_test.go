@@ -14,11 +14,13 @@ type testReporter struct {
 	messages []string
 }
 
-func (r *testReporter) Info(msg string)                    { r.messages = append(r.messages, "INFO: "+msg) }
-func (r *testReporter) Success(msg string)                 { r.messages = append(r.messages, "OK: "+msg) }
-func (r *testReporter) Warn(msg string)                    { r.messages = append(r.messages, "WARN: "+msg) }
-func (r *testReporter) Error(msg string)                   { r.messages = append(r.messages, "ERR: "+msg) }
-func (r *testReporter) Step(current, total int, msg string) { r.messages = append(r.messages, fmt.Sprintf("STEP %d/%d: %s", current, total, msg)) }
+func (r *testReporter) Info(msg string)    { r.messages = append(r.messages, "INFO: "+msg) }
+func (r *testReporter) Success(msg string) { r.messages = append(r.messages, "OK: "+msg) }
+func (r *testReporter) Warn(msg string)    { r.messages = append(r.messages, "WARN: "+msg) }
+func (r *testReporter) Error(msg string)   { r.messages = append(r.messages, "ERR: "+msg) }
+func (r *testReporter) Step(current, total int, msg string) {
+	r.messages = append(r.messages, fmt.Sprintf("STEP %d/%d: %s", current, total, msg))
+}
 
 // fakeModule implementa Module + Checker + Applier para testes.
 type fakeModule struct {
@@ -177,5 +179,116 @@ func TestCheckAll(t *testing.T) {
 
 	if !results[1].Skipped {
 		t.Error("mod2 deveria estar pulado")
+	}
+}
+
+func TestRun_CheckError(t *testing.T) {
+	mock := system.NewMock()
+	reporter := &testReporter{}
+	orch := New(mock, reporter)
+
+	mod := &fakeModule{
+		name:     "fail-check",
+		tags:     []string{"shell"},
+		checkErr: fmt.Errorf("check falhou"),
+	}
+
+	results := orch.Run(context.Background(), []module.Module{mod})
+
+	if results[0].Err == nil {
+		t.Error("esperava erro no resultado quando Check falha")
+	}
+	if mod.applied {
+		t.Error("Apply nao deveria ser chamado quando Check retorna erro")
+	}
+}
+
+func TestRun_PartialStatus(t *testing.T) {
+	mock := system.NewMock()
+	reporter := &testReporter{}
+	orch := New(mock, reporter)
+
+	mod := &fakeModule{
+		name:        "partial-mod",
+		tags:        []string{"shell"},
+		checkStatus: module.Status{Kind: module.Partial, Message: "parcialmente configurado"},
+	}
+
+	results := orch.Run(context.Background(), []module.Module{mod})
+
+	if !results[0].Applied {
+		t.Error("modulo Partial deveria ser aplicado")
+	}
+	if !mod.applied {
+		t.Error("Apply deveria ser chamado para status Partial")
+	}
+}
+
+func TestCheckAll_CheckerError(t *testing.T) {
+	mock := system.NewMock()
+	reporter := &testReporter{}
+	orch := New(mock, reporter)
+
+	mod := &fakeModule{
+		name:     "err-check",
+		tags:     []string{"shell"},
+		checkErr: fmt.Errorf("erro ao verificar"),
+	}
+
+	results := orch.CheckAll(context.Background(), []module.Module{mod})
+
+	if results[0].Err == nil {
+		t.Error("esperava erro no resultado de CheckAll quando checker falha")
+	}
+}
+
+// bareModule implementa apenas Module (sem Checker, Guard ou Applier).
+type bareModule struct {
+	name string
+}
+
+func (b *bareModule) Name() string        { return b.name }
+func (b *bareModule) Description() string { return "modulo sem interfaces extras" }
+func (b *bareModule) Tags() []string      { return []string{"test"} }
+
+func TestRun_BareModule(t *testing.T) {
+	mock := system.NewMock()
+	reporter := &testReporter{}
+	orch := New(mock, reporter)
+
+	mod := &bareModule{name: "bare"}
+
+	results := orch.Run(context.Background(), []module.Module{mod})
+
+	if len(results) != 1 {
+		t.Fatalf("esperava 1 resultado, obteve %d", len(results))
+	}
+	if results[0].Applied {
+		t.Error("bare module sem Applier nao deveria ser marcado como aplicado")
+	}
+	if results[0].Skipped {
+		t.Error("bare module sem Guard nao deveria ser pulado")
+	}
+	if results[0].Err != nil {
+		t.Errorf("nao deveria ter erro: %v", results[0].Err)
+	}
+}
+
+func TestCheckAll_BareModule(t *testing.T) {
+	mock := system.NewMock()
+	reporter := &testReporter{}
+	orch := New(mock, reporter)
+
+	mod := &bareModule{name: "bare"}
+
+	results := orch.CheckAll(context.Background(), []module.Module{mod})
+
+	if results[0].Skipped {
+		t.Error("bare module nao deveria ser pulado")
+	}
+	// Sem Checker, status fica zero-value
+	if results[0].Status.Kind != module.Installed {
+		// zero-value de StatusKind e 0 = Installed
+		t.Logf("status de bare module: %s (zero-value esperado)", results[0].Status.Kind)
 	}
 }

@@ -5,6 +5,7 @@ package bluefin_update
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/ale/dotfiles/internal/module"
 )
@@ -22,9 +23,11 @@ type Module struct{}
 
 func New() *Module { return &Module{} }
 
-func (m *Module) Name() string        { return "bluefin-update" }
-func (m *Module) Description() string { return "Atualizar sistema Bluefin (rpm-ostree, Flatpak, fwupd, Distrobox)" }
-func (m *Module) Tags() []string      { return []string{"system"} }
+func (m *Module) Name() string { return "bluefin-update" }
+func (m *Module) Description() string {
+	return "Atualizar sistema Bluefin (rpm-ostree, Flatpak, fwupd, Distrobox)"
+}
+func (m *Module) Tags() []string { return []string{"system"} }
 
 // ShouldRun retorna false dentro de containers.
 func (m *Module) ShouldRun(_ context.Context, sys module.System) (bool, string) {
@@ -34,9 +37,42 @@ func (m *Module) ShouldRun(_ context.Context, sys module.System) (bool, string) 
 	return true, ""
 }
 
-// Check sempre retorna Missing pois update e uma acao, nao um estado.
-func (m *Module) Check(_ context.Context, _ module.System) (module.Status, error) {
-	return module.Status{Kind: module.Missing, Message: "Atualizacao disponivel"}, nil
+// Check verifica se ha atualizacoes pendentes no sistema.
+// Consulta rpm-ostree e flatpak para determinar o estado.
+func (m *Module) Check(ctx context.Context, sys module.System) (module.Status, error) {
+	rpmPending := false
+	flatpakPending := false
+
+	// rpm-ostree upgrade --check retorna exit 0 se ha updates, exit 77 se nao ha.
+	// Qualquer outro erro (ex: rede) e ignorado — assumimos "sem updates".
+	if sys.CommandExists("rpm-ostree") {
+		_, err := sys.Exec(ctx, "rpm-ostree", "upgrade", "--check")
+		if err == nil {
+			// exit 0 = updates disponiveis
+			rpmPending = true
+		}
+		// exit != 0 (incluindo 77) = sem updates ou erro
+	}
+
+	// flatpak remote-ls --updates lista pacotes com atualizacao pendente.
+	// Se a saida nao esta vazia, ha updates.
+	if sys.CommandExists("flatpak") {
+		out, err := sys.Exec(ctx, "flatpak", "remote-ls", "--updates")
+		if err == nil && strings.TrimSpace(out) != "" {
+			flatpakPending = true
+		}
+	}
+
+	switch {
+	case rpmPending && flatpakPending:
+		return module.Status{Kind: module.Missing, Message: "Atualizacoes disponiveis (sistema e Flatpak)"}, nil
+	case rpmPending:
+		return module.Status{Kind: module.Missing, Message: "Atualizacao do sistema disponivel (rpm-ostree)"}, nil
+	case flatpakPending:
+		return module.Status{Kind: module.Missing, Message: "Atualizacoes Flatpak disponiveis"}, nil
+	default:
+		return module.Status{Kind: module.Installed, Message: "Sistema atualizado"}, nil
+	}
 }
 
 func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.Reporter) error {

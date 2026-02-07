@@ -2,6 +2,7 @@ package starship
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -127,5 +128,66 @@ func TestApply_AddToZshrcIfExists(t *testing.T) {
 	zshrc := string(mock.Files["/home/test/.zshrc"])
 	if !strings.Contains(zshrc, `eval "$(starship init zsh)"`) {
 		t.Error("init do starship nao foi adicionado ao .zshrc")
+	}
+}
+
+func TestApply_InstallFails(t *testing.T) {
+	mock := system.NewMock()
+	mock.Files["/home/test/.bashrc"] = []byte("")
+	mock.ExecResults["sh -c curl -sS https://starship.rs/install.sh | sh -s -- -y"] = system.ExecResult{
+		Err: fmt.Errorf("curl failed"),
+	}
+
+	mod := New("/repo/configs/starship.toml")
+	reporter := moduletest.NoopReporter()
+
+	err := mod.Apply(context.Background(), mock, reporter)
+	if err == nil {
+		t.Error("esperava erro quando instalacao falha")
+	}
+}
+
+func TestApply_MkdirAllFails(t *testing.T) {
+	mock := system.NewMock()
+	mock.Commands["starship"] = true
+	mock.MkdirAllErr = fmt.Errorf("permissao negada")
+
+	mod := New("/repo/configs/starship.toml")
+	reporter := moduletest.NoopReporter()
+
+	err := mod.Apply(context.Background(), mock, reporter)
+	if err == nil {
+		t.Error("esperava erro quando MkdirAll falha")
+	}
+}
+
+func TestApply_SymlinkFails(t *testing.T) {
+	mock := system.NewMock()
+	mock.Commands["starship"] = true
+	mock.SymlinkErr = fmt.Errorf("link error")
+
+	mod := New("/repo/configs/starship.toml")
+	reporter := moduletest.NoopReporter()
+
+	err := mod.Apply(context.Background(), mock, reporter)
+	if err == nil {
+		t.Error("esperava erro quando Symlink falha")
+	}
+}
+
+func TestCheck_ReadFileError(t *testing.T) {
+	mock := system.NewMock()
+	mock.Commands["starship"] = true
+	mock.Files["/home/test/.config/starship.toml"] = []byte("config")
+	// .bashrc nao existe, ReadFile vai retornar erro
+	// Nesse caso hasBashInit fica false (por design)
+
+	mod := New("/repo/configs/starship.toml")
+	status, err := mod.Check(context.Background(), mock)
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if status.Kind != module.Partial {
+		t.Errorf("esperava Partial sem .bashrc, obteve %s", status.Kind)
 	}
 }

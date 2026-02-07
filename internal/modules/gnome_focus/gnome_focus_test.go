@@ -178,3 +178,62 @@ func TestApply_InstallsAndEnables(t *testing.T) {
 		t.Error("dconf write para dynamic-workspaces nao foi chamado")
 	}
 }
+
+func TestApply_DconfFails(t *testing.T) {
+	mock := system.NewMock()
+	mock.Commands["gnome-extensions"] = true
+	mock.Commands["dconf"] = true
+	mock.ExecResults["dconf write /org/gnome/mutter/dynamic-workspaces true"] = system.ExecResult{
+		Err: fmt.Errorf("dconf error"),
+	}
+
+	mod := New("/repo/configs/focus-mode")
+	reporter := moduletest.NoopReporter()
+
+	err := mod.Apply(context.Background(), mock, reporter)
+	if err == nil {
+		t.Error("esperava erro quando dconf write falha")
+	}
+}
+
+func TestApply_MkdirAllFails(t *testing.T) {
+	mock := system.NewMock()
+	mock.Commands["gnome-extensions"] = true
+	mock.Commands["dconf"] = true
+	mock.MkdirAllErr = fmt.Errorf("permissao negada")
+
+	mod := New("/repo/configs/focus-mode")
+	reporter := moduletest.NoopReporter()
+
+	err := mod.Apply(context.Background(), mock, reporter)
+	if err == nil {
+		t.Error("esperava erro quando MkdirAll falha")
+	}
+}
+
+func TestApply_SymlinkFails(t *testing.T) {
+	mock := system.NewMock()
+	mock.Commands["gnome-extensions"] = true
+	mock.Commands["dconf"] = true
+	mock.SymlinkErr = fmt.Errorf("link error")
+
+	mod := New("/repo/configs/focus-mode")
+	reporter := moduletest.NoopReporter()
+
+	err := mod.Apply(context.Background(), mock, reporter)
+	if err == nil {
+		t.Error("esperava erro quando Symlink falha")
+	}
+}
+
+func TestShouldRun_SkipWithoutGnomeExtensions(t *testing.T) {
+	mock := system.NewMock()
+	mock.EnvVars["WAYLAND_DISPLAY"] = "wayland-0"
+	// gnome-extensions nao disponivel
+
+	mod := New("/configs/focus-mode")
+	ok, _ := mod.ShouldRun(context.Background(), mock)
+	if ok {
+		t.Error("deveria pular sem gnome-extensions")
+	}
+}

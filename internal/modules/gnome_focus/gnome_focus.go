@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ale/dotfiles/internal/gnome"
 	"github.com/ale/dotfiles/internal/module"
 )
 
@@ -29,41 +30,23 @@ func (m *Module) Description() string { return "Modo foco: F11 = fullscreen + wo
 func (m *Module) Tags() []string      { return []string{"desktop"} }
 
 func (m *Module) ShouldRun(_ context.Context, sys module.System) (bool, string) {
-	if sys.IsContainer() {
-		return false, "dentro de container"
-	}
-	if sys.Env("WAYLAND_DISPLAY") == "" && sys.Env("DISPLAY") == "" {
-		return false, "sem sessao grafica (faca login no desktop primeiro)"
-	}
-	if !sys.CommandExists("gnome-extensions") {
-		return false, "gnome-extensions nao disponivel (requer GNOME Shell)"
-	}
-	return true, ""
+	return gnome.ShouldRunGuard(sys)
 }
 
 func (m *Module) Check(ctx context.Context, sys module.System) (module.Status, error) {
-	// Verifica extensao
-	out, err := sys.Exec(ctx, "gnome-extensions", "show", extensionUUID)
-	if err != nil {
-		return module.Status{Kind: module.Missing, Message: "Extensao focus-mode nao instalada"}, nil
-	}
-	if !strings.Contains(out, "Enabled: Yes") {
-		return module.Status{Kind: module.Partial, Message: "Focus-mode instalado mas desativado"}, nil
-	}
-	if strings.Contains(out, "OUT OF DATE") {
-		return module.Status{Kind: module.Partial, Message: "Focus-mode desatualizado (faca logout/login ou atualize shell-version)"}, nil
-	}
-	if strings.Contains(out, "ERROR") {
-		return module.Status{Kind: module.Partial, Message: "Focus-mode com erro (verifique logs: journalctl -f -o cat /usr/bin/gnome-shell)"}, nil
+	// Usa o checker compartilhado para extensao
+	status, err := gnome.CheckExtension(ctx, sys, extensionUUID, "Focus-mode")
+	if err != nil || status.Kind != module.Installed {
+		return status, err
 	}
 
-	// Verifica dynamic workspaces
+	// Check adicional: dynamic workspaces
 	dynWs, _ := sys.Exec(ctx, "dconf", "read", "/org/gnome/mutter/dynamic-workspaces")
 	if strings.TrimSpace(dynWs) == "false" {
 		return module.Status{Kind: module.Partial, Message: "Workspaces dinamicos desativados"}, nil
 	}
 
-	return module.Status{Kind: module.Installed, Message: "Focus mode configurado"}, nil
+	return status, nil
 }
 
 func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.Reporter) error {

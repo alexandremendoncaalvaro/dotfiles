@@ -2,6 +2,7 @@ package cedilla
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -145,5 +146,47 @@ line2`
 	}
 	if !strings.Contains(result, "line1") || !strings.Contains(result, "line2") {
 		t.Error("conteudo ao redor foi removido incorretamente")
+	}
+}
+
+func TestCheck_ReadFileError(t *testing.T) {
+	mock := system.NewMock()
+	// Arquivo existe mas com conteudo que causa erro no mock
+	// Na verdade, o mock retorna erro quando o arquivo nao existe
+	// Para simular FileExists=true mas ReadFile=error, precisamos de um truque:
+	// Colocamos o arquivo no map de symlinks (FileExists=true) mas nao no Files (ReadFile=error)
+	mock.Symlinks["/home/test/.XCompose"] = "/some/target"
+
+	mod := New()
+	_, err := mod.Check(context.Background(), mock)
+	if err == nil {
+		t.Error("esperava erro quando ReadFile falha em arquivo existente")
+	}
+}
+
+func TestApply_WriteFileFails(t *testing.T) {
+	mock := system.NewMock()
+	mock.WriteFileErr = fmt.Errorf("disco cheio")
+
+	mod := New()
+	reporter := moduletest.NoopReporter()
+
+	err := mod.Apply(context.Background(), mock, reporter)
+	if err == nil {
+		t.Error("esperava erro quando WriteFile falha")
+	}
+}
+
+func TestApply_ReadFileFailsOnExistingFile(t *testing.T) {
+	mock := system.NewMock()
+	// Arquivo existe via symlink mas ReadFile falha
+	mock.Symlinks["/home/test/.XCompose"] = "/some/target"
+
+	mod := New()
+	reporter := moduletest.NoopReporter()
+
+	err := mod.Apply(context.Background(), mock, reporter)
+	if err == nil {
+		t.Error("esperava erro quando ReadFile falha em arquivo existente")
 	}
 }

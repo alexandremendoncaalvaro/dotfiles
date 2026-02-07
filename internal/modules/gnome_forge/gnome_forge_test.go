@@ -150,3 +150,40 @@ func TestApply_AlreadyInstalled(t *testing.T) {
 		t.Error("esperava chamadas ao dconf para configurar atalhos")
 	}
 }
+
+func TestApply_GnomeVersionFails(t *testing.T) {
+	mock := system.NewMock()
+	mock.Commands["gnome-extensions"] = true
+	mock.ExecResults["gnome-shell --version"] = system.ExecResult{Err: fmt.Errorf("not found")}
+
+	mod := New()
+	reporter := moduletest.NoopReporter()
+
+	err := mod.Apply(context.Background(), mock, reporter)
+	if err == nil {
+		t.Error("esperava erro quando gnome-shell nao esta disponivel")
+	}
+}
+
+func TestApply_DconfFails(t *testing.T) {
+	mock := system.NewMock()
+	mock.Commands["gnome-extensions"] = true
+	mock.Commands["gnome-shell"] = true
+	mock.Commands["dconf"] = true
+	mock.ExecResults["gnome-shell --version"] = system.ExecResult{Output: "GNOME Shell 46.2"}
+	mock.ExecResults["gnome-extensions show forge@jmmaranan.com"] = system.ExecResult{
+		Output: "forge@jmmaranan.com\n  Enabled: Yes\n  State: ACTIVE\n",
+	}
+	// Primeira chamada dconf falha
+	mock.ExecResults["dconf write /org/gnome/desktop/wm/keybindings/maximize @as []"] = system.ExecResult{
+		Err: fmt.Errorf("dconf error"),
+	}
+
+	mod := New()
+	reporter := moduletest.NoopReporter()
+
+	err := mod.Apply(context.Background(), mock, reporter)
+	if err == nil {
+		t.Error("esperava erro quando dconf write falha")
+	}
+}
