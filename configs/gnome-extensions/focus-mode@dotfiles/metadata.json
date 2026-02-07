@@ -2,7 +2,7 @@
   "uuid": "focus-mode@dotfiles",
   "name": "Focus Mode",
   "description": "Fullscreen move janela para workspace exclusivo (estilo macOS)",
-  "shell-version": ["45", "46", "47", "48"],
+  "shell-version": ["45", "46", "47", "48", "49"],
   "version": 1,
   "url": "https://github.com/ale/dotfiles"
 }
