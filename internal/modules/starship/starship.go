@@ -65,7 +65,7 @@ func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.R
 		reporter.Step(1, 4, "Instalando Starship...")
 		_, err := sys.Exec(ctx, "sh", "-c", `curl -sS https://starship.rs/install.sh | sh -s -- -y`)
 		if err != nil {
-			return fmt.Errorf("erro ao instalar starship: %w", err)
+			return fmt.Errorf("erro ao instalar starship (verifique sua conexao com a internet): %w", err)
 		}
 		reporter.Success("Starship instalado")
 	} else {
@@ -120,43 +120,4 @@ func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.R
 	return nil
 }
 
-// Details retorna detalhes granulares do estado do Starship.
-func (m *Module) Details(_ context.Context, sys module.System) []module.Detail {
-	configPath := filepath.Join(sys.HomeDir(), ".config", "starship.toml")
-	bashrc := filepath.Join(sys.HomeDir(), ".bashrc")
-	zshrc := filepath.Join(sys.HomeDir(), ".zshrc")
 
-	hasCmd := sys.CommandExists("starship")
-	hasConfig := sys.FileExists(configPath)
-
-	hasBashInit := false
-	if data, err := sys.ReadFile(bashrc); err == nil {
-		hasBashInit = strings.Contains(string(data), `eval "$(starship init bash)"`)
-	}
-
-	hasZshInit := false
-	if sys.FileExists(zshrc) {
-		if data, err := sys.ReadFile(zshrc); err == nil {
-			hasZshInit = strings.Contains(string(data), `eval "$(starship init zsh)"`)
-		}
-	}
-
-	details := []module.Detail{
-		{Key: "Binário starship", Value: boolToValue(hasCmd, "encontrado no PATH", "ausente"), OK: hasCmd},
-		{Key: "Config", Value: configPath, OK: hasConfig},
-		{Key: "Init .bashrc", Value: boolToValue(hasBashInit, "configurado", "ausente"), OK: hasBashInit},
-	}
-	if sys.FileExists(zshrc) {
-		details = append(details, module.Detail{
-			Key: "Init .zshrc", Value: boolToValue(hasZshInit, "configurado", "ausente"), OK: hasZshInit,
-		})
-	}
-	return details
-}
-
-func boolToValue(ok bool, yes, no string) string {
-	if ok {
-		return yes
-	}
-	return no
-}

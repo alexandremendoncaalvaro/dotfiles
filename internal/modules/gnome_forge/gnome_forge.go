@@ -67,10 +67,10 @@ func (m *Module) ShouldRun(_ context.Context, sys module.System) (bool, string) 
 		return false, "dentro de container"
 	}
 	if sys.Env("WAYLAND_DISPLAY") == "" && sys.Env("DISPLAY") == "" {
-		return false, "sem sessao grafica"
+		return false, "sem sessao grafica (faca login no desktop primeiro)"
 	}
 	if !sys.CommandExists("gnome-extensions") {
-		return false, "gnome-extensions nao disponivel"
+		return false, "gnome-extensions nao disponivel (requer GNOME Shell)"
 	}
 	return true, ""
 }
@@ -129,32 +129,6 @@ func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.R
 	return nil
 }
 
-// Details retorna detalhes granulares do estado do Forge.
-func (m *Module) Details(ctx context.Context, sys module.System) []module.Detail {
-	out, err := sys.Exec(ctx, "gnome-extensions", "show", forgeUUID)
-
-	installed := err == nil && strings.Contains(out, forgeUUID)
-	enabled := installed && strings.Contains(out, "ENABLED")
-
-	// Verificar um atalho representativo
-	focusLeft, _ := sys.Exec(ctx, "dconf", "read",
-		"/org/gnome/shell/extensions/forge/keybindings/window-focus-left")
-	hasKeys := strings.Contains(focusLeft, "<Super>Left")
-
-	return []module.Detail{
-		{Key: "Forge extensão", Value: boolStr(installed, "instalada", "ausente"), OK: installed},
-		{Key: "Forge estado", Value: boolStr(enabled, "ativo", "desativado"), OK: enabled},
-		{Key: "Atalhos", Value: boolStr(hasKeys, "Super+setas configurados", "pendentes"), OK: hasKeys},
-	}
-}
-
-func boolStr(ok bool, yes, no string) string {
-	if ok {
-		return yes
-	}
-	return no
-}
-
 // extensionInfo representa a resposta da API do extensions.gnome.org.
 type extensionInfo struct {
 	DownloadURL string `json:"download_url"`
@@ -168,7 +142,7 @@ func (m *Module) installFromGnomeExtensions(ctx context.Context, sys module.Syst
 
 	jsonOut, err := sys.Exec(ctx, "curl", "-sfL", apiURL)
 	if err != nil {
-		return fmt.Errorf("erro ao consultar extensions.gnome.org: %w", err)
+		return fmt.Errorf("erro ao consultar extensions.gnome.org (verifique sua conexao com a internet): %w", err)
 	}
 
 	var info extensionInfo
@@ -176,7 +150,7 @@ func (m *Module) installFromGnomeExtensions(ctx context.Context, sys module.Syst
 		return fmt.Errorf("resposta inesperada da API: %w", err)
 	}
 	if info.DownloadURL == "" {
-		return fmt.Errorf("Forge nao disponivel para GNOME Shell %s", gnomeVer)
+		return fmt.Errorf("Forge nao disponivel para GNOME Shell %s — verifique se ha uma versao compativel em https://extensions.gnome.org", gnomeVer)
 	}
 
 	downloadURL := "https://extensions.gnome.org" + info.DownloadURL

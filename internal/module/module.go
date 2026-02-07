@@ -73,16 +73,3 @@ type Checker interface {
 type Applier interface {
 	Apply(ctx context.Context, sys System, reporter Reporter) error
 }
-
-// Detail representa um detalhe de configuracao para exibicao.
-type Detail struct {
-	Key   string // Ex: "Binário", "Config", "Atalho"
-	Value string // Ex: "/usr/bin/starship", "~/.config/starship.toml"
-	OK    bool   // true = configurado, false = pendente
-}
-
-// Detailer retorna detalhes granulares da configuracao atual.
-// Opcional — se o modulo implementar, status mostra os detalhes.
-type Detailer interface {
-	Details(ctx context.Context, sys System) []Detail
-}

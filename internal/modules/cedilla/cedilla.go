@@ -126,36 +126,3 @@ func removeBlock(content, begin, end string) string {
 
 	return content[:startIdx] + content[endIdx:]
 }
-
-// Details retorna detalhes granulares do estado da cedilha.
-func (m *Module) Details(_ context.Context, sys module.System) []module.Detail {
-	xcompose := sys.HomeDir() + "/.XCompose"
-
-	fileExists := sys.FileExists(xcompose)
-	hasMarkers := false
-	if fileExists {
-		data, err := sys.ReadFile(xcompose)
-		if err == nil {
-			content := string(data)
-			hasMarkers = strings.Contains(content, beginMarker) && strings.Contains(content, endMarker)
-		}
-	}
-
-	session := sys.Env("XDG_SESSION_TYPE")
-	if session == "" {
-		session = "desconhecido"
-	}
-
-	return []module.Detail{
-		{Key: "~/.XCompose", Value: boolVal(fileExists, "existe", "ausente"), OK: fileExists},
-		{Key: "Regras cedilha", Value: boolVal(hasMarkers, "configuradas", "ausentes"), OK: hasMarkers},
-		{Key: "Sessão", Value: session, OK: session == "wayland"},
-	}
-}
-
-func boolVal(ok bool, yes, no string) string {
-	if ok {
-		return yes
-	}
-	return no
-}

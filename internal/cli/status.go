@@ -13,6 +13,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// maxWidth for module name column alignment.
+const maxNameWidth = 20
+
 // ANSI colors for terminal output.
 const (
 	colorReset  = "\033[0m"
@@ -88,22 +91,12 @@ func newStatusCmd(app *App) *cobra.Command {
 
 			for _, r := range results {
 				icon, color := statusStyle(r.Status.Kind)
-				fmt.Printf("  %s%s%s  %s%s%s\n", color, icon, colorReset, colorBold, r.Module.Name(), colorReset)
-				fmt.Printf("      %s%s%s\n", colorDim, r.Status.Message, colorReset)
-
-				// Show details if module implements Detailer
-				if detailer, ok := r.Module.(module.Detailer); ok {
-					details := detailer.Details(ctx, sys)
-					for _, d := range details {
-						dIcon := colorGreen + "✓" + colorReset
-						if !d.OK {
-							dIcon = colorRed + "✗" + colorReset
-						}
-						fmt.Printf("      %s %-22s %s%s%s\n", dIcon, d.Key, colorDim, d.Value, colorReset)
-					}
-				}
-				fmt.Println()
+				fmt.Printf("  %s%s%s  %s%-*s%s  %s%s%s\n",
+					color, icon, colorReset,
+					colorBold, maxNameWidth, r.Module.Name(), colorReset,
+					colorDim, r.Status.Message, colorReset)
 			}
+			fmt.Println()
 
 			// ── Skipped modules ──────────────────────
 			allModules := app.Registry.All()

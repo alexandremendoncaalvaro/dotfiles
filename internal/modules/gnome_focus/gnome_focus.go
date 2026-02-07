@@ -33,10 +33,10 @@ func (m *Module) ShouldRun(_ context.Context, sys module.System) (bool, string) 
 		return false, "dentro de container"
 	}
 	if sys.Env("WAYLAND_DISPLAY") == "" && sys.Env("DISPLAY") == "" {
-		return false, "sem sessao grafica"
+		return false, "sem sessao grafica (faca login no desktop primeiro)"
 	}
 	if !sys.CommandExists("gnome-extensions") {
-		return false, "gnome-extensions nao disponivel"
+		return false, "gnome-extensions nao disponivel (requer GNOME Shell)"
 	}
 	return true, ""
 }
@@ -98,29 +98,4 @@ func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.R
 	return nil
 }
 
-// Details retorna detalhes granulares do estado do focus-mode.
-func (m *Module) Details(ctx context.Context, sys module.System) []module.Detail {
-	out, err := sys.Exec(ctx, "gnome-extensions", "show", extensionUUID)
 
-	installed := err == nil
-	enabled := installed && strings.Contains(out, "ENABLED")
-
-	dynWs, _ := sys.Exec(ctx, "dconf", "read", "/org/gnome/mutter/dynamic-workspaces")
-	hasDynWs := strings.TrimSpace(dynWs) != "false"
-
-	extPath := filepath.Join(sys.HomeDir(), ".local", "share", "gnome-shell", "extensions", extensionUUID)
-	hasSymlink := sys.FileExists(extPath)
-
-	return []module.Detail{
-		{Key: "Extensão", Value: boolFmt(hasSymlink, "symlink OK", "ausente"), OK: hasSymlink},
-		{Key: "Estado", Value: boolFmt(enabled, "ativo", "desativado"), OK: enabled},
-		{Key: "Dynamic workspaces", Value: boolFmt(hasDynWs, "ativados", "desativados"), OK: hasDynWs},
-	}
-}
-
-func boolFmt(ok bool, yes, no string) string {
-	if ok {
-		return yes
-	}
-	return no
-}

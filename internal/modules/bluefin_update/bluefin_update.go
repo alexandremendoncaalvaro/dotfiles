@@ -26,30 +26,6 @@ func (m *Module) Name() string        { return "bluefin-update" }
 func (m *Module) Description() string { return "Atualizar sistema Bluefin (rpm-ostree, Flatpak, fwupd, Distrobox)" }
 func (m *Module) Tags() []string      { return []string{"system"} }
 
-// Details retorna a disponibilidade de cada ferramenta de atualização.
-func (m *Module) Details(_ context.Context, sys module.System) []module.Detail {
-	tools := []struct {
-		name string
-		cmd  string
-	}{
-		{"rpm-ostree", "rpm-ostree"},
-		{"Flatpak", "flatpak"},
-		{"fwupd (firmware)", "fwupdmgr"},
-		{"Distrobox", "distrobox"},
-	}
-
-	details := make([]module.Detail, 0, len(tools))
-	for _, t := range tools {
-		ok := sys.CommandExists(t.cmd)
-		val := "disponivel"
-		if !ok {
-			val = "nao encontrado"
-		}
-		details = append(details, module.Detail{Key: t.name, Value: val, OK: ok})
-	}
-	return details
-}
-
 // ShouldRun retorna false dentro de containers.
 func (m *Module) ShouldRun(_ context.Context, sys module.System) (bool, string) {
 	if sys.IsContainer() {
@@ -104,7 +80,7 @@ func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.R
 				reporter.Info(fmt.Sprintf("%s nao encontrado, pulando", s.cmd))
 				continue
 			}
-			return fmt.Errorf("comando obrigatorio nao encontrado: %s", s.cmd)
+			return fmt.Errorf("comando obrigatorio nao encontrado: %s — voce esta rodando em um sistema Bluefin?", s.cmd)
 		}
 
 		err := sys.ExecStream(ctx, func(line string) {

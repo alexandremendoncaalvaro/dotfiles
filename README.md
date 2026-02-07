@@ -1,100 +1,69 @@
 # dotfiles
 
-CLI para configurar e manter um desktop [Bluefin](https://projectbluefin.io) (Fedora Atomic). Escrito em Go, com TUI interativo via [Bubble Tea](https://github.com/charmbracelet/bubbletea).
+Configurações para [Bluefin](https://projectbluefin.io) (Fedora Atomic). Roda uma vez e deixa tudo pronto.
 
-## O que faz
-
-O programa organiza configurações em **módulos** independentes, filtrados por **perfil**:
-
-| Módulo | Tags | O que configura |
-|--------|------|-----------------|
-| `starship` | shell | Instala o prompt [Starship](https://starship.rs), cria symlink do config e adiciona init ao `.bashrc`/`.zshrc` |
-| `cedilla-fix` | desktop | Corrige cedilha no Bluefin (Wayland/GNOME) via `~/.XCompose` |
-| `gnome-forge` | desktop | Auto-tiling com [Forge](https://github.com/forge-ext/forge). Super+setas (foco), Super+Shift (mover), Super+Ctrl (resize) |
-| `gnome-focus-mode` | desktop | F11 = fullscreen + workspace exclusivo (estilo macOS). Extensão GNOME Shell própria |
-| `bluefin-update` | system | Atualiza rpm-ostree, Flatpak, firmware (fwupd) e Distrobox |
-
-### Perfis
-
-| Perfil | Tags incluídas | Excluídas | Caso de uso |
-|--------|---------------|-----------|-------------|
-| `full` | shell, desktop, system | — | Desktop Bluefin completo |
-| `minimal` | shell | desktop, system | Devcontainer / CI |
-| `server` | shell, system | desktop | Servidor sem desktop |
-
-## Instalação
-
-Uma linha — clona, instala Go se precisar, compila e abre o TUI:
+## Instalar
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/ale/dotfiles/main/scripts/install.sh)"
 ```
 
-Já clonou? Só rodar:
+Isso clona o repositório, instala Go via `brew` se necessário, compila e abre o TUI.
+
+Já clonou? `make run` faz tudo.
+
+## O que configura
+
+| Módulo | O que faz |
+|--------|-----------|
+| **starship** | Instala o prompt [Starship](https://starship.rs), configura `.bashrc` e `.zshrc` |
+| **cedilla-fix** | Corrige cedilha (`ç`) no Wayland/GNOME via `~/.XCompose` |
+| **gnome-forge** | Auto-tiling com [Forge](https://github.com/forge-ext/forge). `Super+setas` = foco, `+Shift` = mover, `+Ctrl` = resize |
+| **gnome-focus-mode** | `F11` = fullscreen + workspace exclusivo (estilo macOS) |
+| **bluefin-update** | Atualiza rpm-ostree, Flatpak, firmware e Distrobox |
+
+Na TUI você escolhe quais módulos quer — não precisa instalar tudo.
+
+## Comandos
 
 ```bash
-cd ~/dotfiles
-make run
-```
-
-> No Bluefin o Go é instalado via `brew` automaticamente. Em distrobox, usa `/usr/local/go` se disponível.
-
-## Uso
-
-```bash
-# Detecta o ambiente e abre o TUI com os módulos certos
-dotfiles apply
-
-# Forçar um perfil específico
-dotfiles apply -p minimal
-
-# Headless (sem TUI)
-dotfiles apply --headless
-
-# Simular sem executar
-dotfiles apply --dry-run --headless
-
-# Ver status dos módulos
-dotfiles status
-
-# Atualizar sistema (atalho para bluefin-update)
-dotfiles update
+dotfiles apply            # Abre o TUI, escolha os módulos
+dotfiles apply --headless # Aplica tudo sem interação
+dotfiles status           # Mostra o que está instalado
+dotfiles update           # Atualiza o dotfiles (git pull + rebuild)
 ```
 
 O perfil é detectado automaticamente:
 
-| Contexto | Perfil | Razão |
-|----------|--------|-------|
-| Container | `minimal` | Sem desktop, sem system |
-| Sem sessão gráfica | `server` | Sem desktop |
-| Desktop normal | `full` | Tudo disponível |
+| Onde você está | Perfil | Módulos |
+|----------------|--------|---------|
+| Desktop Bluefin | `full` | Todos |
+| Container / Distrobox | `minimal` | Só shell (starship) |
+| Sem sessão gráfica | `server` | Shell + sistema |
 
-Use `--profile` / `-p` para sobrescrever.
+Para forçar: `dotfiles apply -p minimal`
 
-## Estrutura
-
-```
-cmd/dotfiles/       → Entry point
-internal/
-  module/           → Interfaces de domínio (Module, System, Guard, Checker, Applier)
-  modules/          → Implementações dos módulos
-  profile/          → Perfis e resolução de tags
-  orchestrator/     → Guard → Check → Apply pipeline
-  system/           → Implementações de System (Real, Mock, DryRun)
-  cli/              → Comandos Cobra
-  tui/              → Interface Bubble Tea
-configs/            → Arquivos de configuração (starship.toml)
-```
-
-## Adicionando um módulo
-
-1. Crie `internal/modules/nome/nome.go` implementando `module.Module` + as interfaces necessárias (`Checker`, `Applier`, opcionalmente `Guard`)
-2. Registre em `cmd/dotfiles/main.go` com `reg.Register(nome.New())`
-
-O módulo só precisa implementar o que usa — o orchestrator detecta as interfaces por type assertion.
-
-## Testes
+## Atualizar
 
 ```bash
-make test
+dotfiles update
+```
+
+Ou manualmente:
+
+```bash
+cd ~/dotfiles && git pull && make build
+```
+
+## Contribuindo um módulo
+
+1. Crie `internal/modules/nome/nome.go`
+2. Implemente `Module`, `Checker` e `Applier` (e `Guard` se precisar pular em certos ambientes)
+3. Registre em `cmd/dotfiles/main.go` com `reg.Register(nome.New())`
+4. Adicione tag(s) (`shell`, `desktop`, `system`) para controle por perfil
+5. Escreva testes usando `system.Mock` — veja qualquer módulo existente como exemplo
+
+```bash
+make test    # Roda os testes
+make lint    # go vet
 ```
