@@ -3,6 +3,7 @@ package gnome_focus
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/ale/blueprint/internal/module"
@@ -158,24 +159,39 @@ func TestApply_InstallsAndEnables(t *testing.T) {
 		t.Fatalf("erro inesperado: %v", err)
 	}
 
-	// Verifica symlink criado
-	dest := "/home/test/.local/share/gnome-shell/extensions/focus-mode@blueprint"
-	if target, ok := mock.Symlinks[dest]; !ok {
-		t.Error("symlink nao foi criado")
-	} else if target != "/repo/configs/gnome-extensions/focus-mode@blueprint" {
-		t.Errorf("symlink aponta para %s", target)
+	// Verifica que os comandos corretos foram executados
+	expectedCmds := []string{
+		"dconf write /org/gnome/mutter/dynamic-workspaces true",
 	}
-
-	// Verifica que dconf write foi chamado para dynamic-workspaces
-	found := false
-	for _, cmd := range mock.ExecLog {
-		if cmd == "dconf write /org/gnome/mutter/dynamic-workspaces true" {
-			found = true
-			break
+	for _, expected := range expectedCmds {
+		found := false
+		for _, cmd := range mock.ExecLog {
+			if cmd == expected {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("comando esperado nao executado: %s", expected)
 		}
 	}
-	if !found {
-		t.Error("dconf write para dynamic-workspaces nao foi chamado")
+
+	// Verifica que zip e gnome-extensions install foram chamados
+	foundZip := false
+	foundInstall := false
+	for _, cmd := range mock.ExecLog {
+		if strings.HasPrefix(cmd, "zip -j") {
+			foundZip = true
+		}
+		if strings.HasPrefix(cmd, "gnome-extensions install --force") {
+			foundInstall = true
+		}
+	}
+	if !foundZip {
+		t.Error("zip nao foi chamado")
+	}
+	if !foundInstall {
+		t.Error("gnome-extensions install nao foi chamado")
 	}
 }
 
@@ -196,33 +212,38 @@ func TestApply_DconfFails(t *testing.T) {
 	}
 }
 
-func TestApply_MkdirAllFails(t *testing.T) {
+func TestApply_ZipFails(t *testing.T) {
 	mock := system.NewMock()
 	mock.Commands["gnome-extensions"] = true
 	mock.Commands["dconf"] = true
-	mock.MkdirAllErr = fmt.Errorf("permissao negada")
+	// zip falha para qualquer chamada que comece com "zip"
+	mock.ExecResults["zip -j /tmp/focus-mode@blueprint.zip /repo/configs/focus-mode/metadata.json /repo/configs/focus-mode/extension.js"] = system.ExecResult{
+		Err: fmt.Errorf("zip not found"),
+	}
 
 	mod := New("/repo/configs/focus-mode")
 	reporter := moduletest.NoopReporter()
 
 	err := mod.Apply(context.Background(), mock, reporter)
 	if err == nil {
-		t.Error("esperava erro quando MkdirAll falha")
+		t.Error("esperava erro quando zip falha")
 	}
 }
 
-func TestApply_SymlinkFails(t *testing.T) {
+func TestApply_InstallFails(t *testing.T) {
 	mock := system.NewMock()
 	mock.Commands["gnome-extensions"] = true
 	mock.Commands["dconf"] = true
-	mock.SymlinkErr = fmt.Errorf("link error")
+	mock.ExecResults["gnome-extensions install --force /tmp/focus-mode@blueprint.zip"] = system.ExecResult{
+		Err: fmt.Errorf("install error"),
+	}
 
 	mod := New("/repo/configs/focus-mode")
 	reporter := moduletest.NoopReporter()
 
 	err := mod.Apply(context.Background(), mock, reporter)
 	if err == nil {
-		t.Error("esperava erro quando Symlink falha")
+		t.Error("esperava erro quando gnome-extensions install falha")
 	}
 }
 

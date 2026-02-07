@@ -6,6 +6,7 @@ package gnome_focus
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -59,18 +60,17 @@ func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.R
 	}
 	reporter.Success("Workspaces dinamicos ativados")
 
-	// 2. Instalar extensao via symlink
+	// 2. Instalar extensao via zip (gnome-extensions install forca o shell a reconhecer)
 	reporter.Step(2, total, "Instalando extensao focus-mode...")
-	extDir := filepath.Join(sys.HomeDir(), ".local", "share", "gnome-shell", "extensions")
-	if err := sys.MkdirAll(extDir, 0o755); err != nil {
-		return fmt.Errorf("erro ao criar diretorio de extensoes: %w", err)
+	zipPath := filepath.Join(os.TempDir(), extensionUUID+".zip")
+	if _, err := sys.Exec(ctx, "zip", "-j", zipPath, filepath.Join(m.ExtensionSource, "metadata.json"), filepath.Join(m.ExtensionSource, "extension.js")); err != nil {
+		return fmt.Errorf("erro ao criar zip da extensao: %w", err)
 	}
 
-	dest := filepath.Join(extDir, extensionUUID)
-	if err := sys.Symlink(m.ExtensionSource, dest); err != nil {
-		return fmt.Errorf("erro ao criar symlink da extensao: %w", err)
+	if _, err := sys.Exec(ctx, "gnome-extensions", "install", "--force", zipPath); err != nil {
+		return fmt.Errorf("erro ao instalar extensao: %w", err)
 	}
-	reporter.Success("Extensao instalada via symlink")
+	reporter.Success("Extensao instalada")
 
 	// 3. Ativar
 	reporter.Step(3, total, "Ativando extensao...")
@@ -82,7 +82,6 @@ func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.R
 	}
 
 	reporter.Info("F11 agora envia a janela para um workspace exclusivo")
-	reporter.Info("Faca logout e login se nao funcionar imediatamente")
 
 	return nil
 }

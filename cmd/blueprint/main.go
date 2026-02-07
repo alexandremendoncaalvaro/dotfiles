@@ -14,6 +14,7 @@ import (
 	"github.com/ale/blueprint/internal/modules/clipboard_indicator"
 	"github.com/ale/blueprint/internal/modules/gnome_focus"
 	"github.com/ale/blueprint/internal/modules/gnome_forge"
+	"github.com/ale/blueprint/internal/modules/passwordless"
 	"github.com/ale/blueprint/internal/modules/starship"
 	"github.com/ale/blueprint/internal/system"
 )
@@ -38,6 +39,7 @@ func main() {
 	must(reg.Register(gnome_focus.New(focusExtSource)))
 
 	must(reg.Register(bluefin_update.New()))
+	must(reg.Register(passwordless.New()))
 
 	// Configura a app
 	app := &cli.App{
