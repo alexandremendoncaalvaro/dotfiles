@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/ale/blueprint/internal/module"
-	"github.com/ale/blueprint/internal/orchestrator"
 	"github.com/ale/blueprint/internal/profile"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -194,24 +193,3 @@ func (m model) updateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// tuiReporter implementa Reporter para uso dentro do Bubble Tea.
-// Envia mensagens como tea.Msg para atualizar o modelo.
-type tuiReporter struct {
-	messages []string
-}
-
-func (r *tuiReporter) Info(msg string)    { r.messages = append(r.messages, "[INFO] "+msg) }
-func (r *tuiReporter) Success(msg string) { r.messages = append(r.messages, "[OK] "+msg) }
-func (r *tuiReporter) Warn(msg string)    { r.messages = append(r.messages, "[WARN] "+msg) }
-func (r *tuiReporter) Error(msg string)   { r.messages = append(r.messages, "[ERRO] "+msg) }
-func (r *tuiReporter) Step(current, total int, msg string) {
-	r.messages = append(r.messages, fmt.Sprintf("[%d/%d] %s", current, total, msg))
-}
-
-// runModulesMsg e uma mensagem interna para iniciar a execucao.
-type runModulesMsg struct{}
-
-// modulesDoneMsg sinaliza que a execucao terminou.
-type modulesDoneMsg struct {
-	results []orchestrator.Result
-}
