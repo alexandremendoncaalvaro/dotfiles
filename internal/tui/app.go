@@ -27,6 +27,8 @@ type model struct {
 	sys          module.System
 	profile      profile.Profile
 	autoDetected bool
+	width        int
+	height       int
 
 	// Estado das telas
 	welcome       welcomeModel
@@ -88,6 +90,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if keyMsg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
+	}
+
+	if ws, ok := msg.(tea.WindowSizeMsg); ok {
+		m.width = ws.Width
+		m.height = ws.Height
+		m.execute.width = ws.Width
+		m.execute.height = ws.Height
 	}
 
 	switch m.screen {
@@ -163,6 +172,8 @@ func (m model) updateModuleConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 		selectedModules := m.moduleConfirm.selectedModules()
 		m.screen = screenExecute
 		m.execute = newExecuteModel(selectedModules, m.sys)
+		m.execute.width = m.width
+		m.execute.height = m.height
 		return m, m.execute.Init()
 	}
 

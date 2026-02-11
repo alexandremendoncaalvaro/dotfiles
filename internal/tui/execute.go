@@ -9,6 +9,7 @@ import (
 	"github.com/ale/blueprint/internal/orchestrator"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // Eventos enviados pela goroutine de processamento.
@@ -89,12 +90,12 @@ type executeModel struct {
 	sys     module.System
 	spinner spinner.Model
 	ch      chan any
-	logs    []string // ultimas linhas de log do modulo atual (max 5)
+	allLogs []logEvent // buffer acumulativo de TODOS os logs (nunca limpa)
 	results []orchestrator.Result
 	done    bool
+	width   int
+	height  int
 }
-
-const maxLogLines = 5
 
 func newExecuteModel(modules []module.Module, sys module.System) executeModel {
 	s := spinner.New()
@@ -126,14 +127,10 @@ func (m executeModel) Update(msg tea.Msg) (executeModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case setRunningEvent:
 		m.states[msg.index].status = statusRunning
-		m.logs = nil
 		return m, m.waitForEvent()
 
 	case logEvent:
-		m.logs = append(m.logs, m.formatLog(msg))
-		if len(m.logs) > maxLogLines {
-			m.logs = m.logs[len(m.logs)-maxLogLines:]
-		}
+		m.allLogs = append(m.allLogs, msg)
 		return m, m.waitForEvent()
 
 	case resultEvent:
@@ -156,7 +153,6 @@ func (m executeModel) Update(msg tea.Msg) (executeModel, tea.Cmd) {
 		}
 
 		m.results = append(m.results, r)
-		m.logs = nil
 		return m, m.waitForEvent()
 
 	case allDoneEvent:
@@ -173,14 +169,42 @@ func (m executeModel) Update(msg tea.Msg) (executeModel, tea.Cmd) {
 }
 
 func (m executeModel) View() string {
-	var b strings.Builder
+	// Dimensoes do terminal (fallback so quando ainda nao recebemos WindowSizeMsg)
+	w := m.width
+	if w == 0 {
+		w = 80
+	}
+	h := m.height
+	if h == 0 {
+		h = 24
+	}
 
-	b.WriteString(titleStyle.Render("Executando..."))
-	b.WriteString("\n\n")
+	// Larguras dos paineis: esquerda ~40%, direita = resto.
+	leftW := w * 40 / 100
+	if leftW < 30 {
+		leftW = 30
+	}
+	rightW := w - leftW
+
+	// Paineis ocupam a altura inteira do terminal.
+	panelH := h
+	if panelH < 5 {
+		panelH = 5
+	}
+	// Linhas de conteudo: panelH - 2 (bordas) - 1 (titulo)
+	contentH := panelH - 3
+	if contentH < 1 {
+		contentH = 1
+	}
+
+	// --- Painel esquerdo: Progresso ---
+	var left strings.Builder
 
 	if !m.done {
-		b.WriteString(m.spinner.View())
-		b.WriteString(" Aplicando configuracoes...\n\n")
+		left.WriteString(m.spinner.View())
+		left.WriteString(" Aplicando configuracoes...\n\n")
+	} else {
+		left.WriteString("Concluido.\n\n")
 	}
 
 	for _, st := range m.states {
@@ -204,17 +228,38 @@ func (m executeModel) View() string {
 			line = mutedStyle.Render(st.mod.Name())
 		}
 
-		b.WriteString(fmt.Sprintf("    %s %s\n", icon, line))
+		left.WriteString(fmt.Sprintf("  %s %s\n", icon, line))
 	}
 
-	if len(m.logs) > 0 {
-		b.WriteString("\n")
-		for _, l := range m.logs {
-			b.WriteString(fmt.Sprintf("    %s\n", l))
-		}
+	leftPanel := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(colorPrimary).
+		Padding(0, 1).
+		Width(leftW).
+		Height(panelH).
+		Render(lipgloss.NewStyle().Bold(true).Foreground(colorPrimary).Render("Progresso") + "\n" + left.String())
+
+	// --- Painel direito: Log ---
+	var right strings.Builder
+
+	start := 0
+	if len(m.allLogs) > contentH {
+		start = len(m.allLogs) - contentH
 	}
 
-	return boxStyle.Render(b.String())
+	for i := start; i < len(m.allLogs); i++ {
+		right.WriteString("  " + m.formatLog(m.allLogs[i]) + "\n")
+	}
+
+	rightPanel := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(colorMuted).
+		Padding(0, 1).
+		Width(rightW).
+		Height(panelH).
+		Render(lipgloss.NewStyle().Bold(true).Foreground(colorMuted).Render("Log") + "\n" + right.String())
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
 }
 
 // processModules processa os modulos um a um, replicando a logica do
@@ -235,6 +280,7 @@ func (m executeModel) processModules() tea.Cmd {
 			if guard, ok := mod.(module.Guard); ok {
 				shouldRun, reason := guard.ShouldRun(ctx, m.sys)
 				if !shouldRun {
+					m.ch <- logEvent{style: logWarn, text: fmt.Sprintf("%s: %s", mod.Name(), reason)}
 					m.ch <- resultEvent{
 						index: i,
 						result: orchestrator.Result{
@@ -269,6 +315,11 @@ func (m executeModel) processModules() tea.Cmd {
 				checkStatus = status
 
 				if status.Kind == module.Installed {
+					msg := status.Message
+					if msg == "" {
+						msg = "ja instalado"
+					}
+					m.ch <- logEvent{style: logSuccess, text: fmt.Sprintf("%s: %s", mod.Name(), msg)}
 					m.ch <- resultEvent{
 						index: i,
 						result: orchestrator.Result{
