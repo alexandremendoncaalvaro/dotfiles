@@ -15,7 +15,7 @@ import (
 	"github.com/ale/blueprint/internal/modules/devbox"
 	"github.com/ale/blueprint/internal/modules/devcontainers"
 	"github.com/ale/blueprint/internal/modules/gnome_focus"
-	"github.com/ale/blueprint/internal/modules/gnome_forge"
+	"github.com/ale/blueprint/internal/modules/tiling_shell"
 	"github.com/ale/blueprint/internal/modules/passwordless"
 	"github.com/ale/blueprint/internal/modules/starship"
 	"github.com/ale/blueprint/internal/modules/usb_audio"
@@ -35,7 +35,7 @@ func main() {
 	configSource := filepath.Join(repoDir, "configs", "starship.toml")
 	must(reg.Register(starship.New(configSource)))
 	must(reg.Register(cedilla.New()))
-	must(reg.Register(gnome_forge.New()))
+	must(reg.Register(tiling_shell.New()))
 	must(reg.Register(clipboard_indicator.New()))
 
 	focusExtSource := filepath.Join(repoDir, "configs", "gnome-extensions", "focus-mode@blueprint")

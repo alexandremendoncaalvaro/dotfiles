@@ -43,6 +43,11 @@ func newApplyCmd(app *App) *cobra.Command {
 				return nil
 			}
 
+			// Sudo interativo: pede senha antes de iniciar TUI/headless
+			if !app.Options.DryRun && !app.System.IsContainer() && hasSystemModules(modules) {
+				ensureSudo()
+			}
+
 			// Configura dry-run se necessario
 			sys := app.System
 			if app.Options.DryRun {
@@ -95,5 +100,3 @@ func newApplyCmd(app *App) *cobra.Command {
 
 	return cmd
 }
-
-
