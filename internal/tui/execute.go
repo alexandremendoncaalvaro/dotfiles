@@ -66,6 +66,22 @@ func (r *channelReporter) Step(current, total int, msg string) {
 	r.ch <- logEvent{style: logStep, text: fmt.Sprintf("[%d/%d] %s", current, total, msg)}
 }
 
+// notingReporter captura mensagens Info como notes alem de repassar ao reporter.
+type notingReporter struct {
+	inner *channelReporter
+	notes []string
+}
+
+func (r *notingReporter) Info(msg string) {
+	r.notes = append(r.notes, msg)
+	r.inner.Info(msg)
+}
+
+func (r *notingReporter) Success(msg string)                  { r.inner.Success(msg) }
+func (r *notingReporter) Warn(msg string)                     { r.inner.Warn(msg) }
+func (r *notingReporter) Error(msg string)                    { r.inner.Error(msg) }
+func (r *notingReporter) Step(current, total int, msg string) { r.inner.Step(current, total, msg) }
+
 // moduleStatus representa o estado de um modulo durante a execucao.
 type moduleStatus int
 
@@ -333,7 +349,8 @@ func (m executeModel) processModules() tea.Cmd {
 
 			// 3. Apply
 			if applier, ok := mod.(module.Applier); ok {
-				if err := applier.Apply(ctx, m.sys, reporter); err != nil {
+				nr := &notingReporter{inner: reporter}
+				if err := applier.Apply(ctx, m.sys, nr); err != nil {
 					reporter.Error(fmt.Sprintf("%s: erro ao aplicar — %v", mod.Name(), err))
 					m.ch <- resultEvent{
 						index: i,
@@ -351,6 +368,7 @@ func (m executeModel) processModules() tea.Cmd {
 						Module:  mod,
 						Status:  checkStatus,
 						Applied: true,
+						Notes:   nr.notes,
 					},
 				}
 			} else {

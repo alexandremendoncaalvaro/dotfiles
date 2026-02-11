@@ -71,6 +71,20 @@ func (m summaryModel) View() string {
 		b.WriteString(fmt.Sprintf("  %s %s — %s\n", icon, r.Module.Name(), status))
 	}
 
+	// Notas pos-apply (instrucoes importantes para o usuario)
+	var allNotes []string
+	for _, r := range m.results {
+		allNotes = append(allNotes, r.Notes...)
+	}
+	if len(allNotes) > 0 {
+		b.WriteString("\n")
+		b.WriteString(highlightStyle.Render("Proximos passos:"))
+		b.WriteString("\n")
+		for _, note := range allNotes {
+			b.WriteString(fmt.Sprintf("  %s\n", note))
+		}
+	}
+
 	b.WriteString("\n")
 	b.WriteString(mutedStyle.Render("Pressione ENTER ou q para sair"))
 

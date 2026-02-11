@@ -88,6 +88,19 @@ func newApplyCmd(app *App) *cobra.Command {
 				fmt.Printf("  [%s] %s\n", icon, r.Module.Name())
 			}
 
+			// Notas pos-apply (instrucoes importantes para o usuario)
+			var allNotes []string
+			for _, r := range results {
+				allNotes = append(allNotes, r.Notes...)
+			}
+			if len(allNotes) > 0 {
+				fmt.Println()
+				fmt.Println("=== Proximos passos ===")
+				for _, note := range allNotes {
+					fmt.Printf("  %s\n", note)
+				}
+			}
+
 			if errs > 0 {
 				return fmt.Errorf("%d modulo(s) com erro", errs)
 			}

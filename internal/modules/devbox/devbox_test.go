@@ -105,6 +105,7 @@ func TestApply_Success(t *testing.T) {
 		t.Fatalf("erro inesperado: %v", err)
 	}
 
+	// Sem .vscode-server existente, sao 2 comandos (create + provision)
 	if len(mock.ExecLog) != 2 {
 		t.Errorf("esperava 2 comandos executados, obteve %d: %v", len(mock.ExecLog), mock.ExecLog)
 	}
@@ -121,6 +122,31 @@ func TestApply_Success(t *testing.T) {
 		if mock.ExecLog[i] != cmd {
 			t.Errorf("comando %d: esperava %q, obteve %q", i, cmd, mock.ExecLog[i])
 		}
+	}
+}
+
+func TestApply_ChownsVscodeServer(t *testing.T) {
+	mock := system.NewMock()
+	// Simula .vscode-server existente (de sessao anterior como root)
+	mock.Files["/home/test/.distrobox/devbox/.vscode-server"] = []byte{}
+
+	mod := New("/repo/configs/devbox/setup-dev.sh")
+	reporter := moduletest.NoopReporter()
+
+	err := mod.Apply(context.Background(), mock, reporter)
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+
+	// 3 comandos: create + provision + chown
+	if len(mock.ExecLog) != 3 {
+		t.Fatalf("esperava 3 comandos executados, obteve %d: %v", len(mock.ExecLog), mock.ExecLog)
+	}
+
+	chownCmd := mock.ExecLog[2]
+	expected := "distrobox enter devbox -- sudo chown -R ale:ale /home/test/.distrobox/devbox/.vscode-server"
+	if chownCmd != expected {
+		t.Errorf("comando chown: esperava %q, obteve %q", expected, chownCmd)
 	}
 }
 

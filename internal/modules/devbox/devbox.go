@@ -59,7 +59,7 @@ func hasContainer(output, name string) bool {
 }
 
 func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.Reporter) error {
-	reporter.Step(1, 2, "Criando container devbox...")
+	reporter.Step(1, 3, "Criando container devbox...")
 	homePath := filepath.Join(sys.HomeDir(), ".distrobox", "devbox")
 	_, err := sys.Exec(ctx, "distrobox", "create",
 		"--name", "devbox",
@@ -74,12 +74,34 @@ func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.R
 	}
 
 	// TODO: considerar ExecStream para dar feedback em tempo real (setup demora minutos)
-	reporter.Step(2, 2, "Provisionando devbox...")
+	reporter.Step(2, 3, "Provisionando devbox...")
 	_, err = sys.Exec(ctx, "distrobox", "enter", "devbox", "--", "bash", m.SetupScript)
 	if err != nil {
 		return fmt.Errorf("erro ao provisionar devbox: %w", err)
 	}
 	reporter.Success("Devbox provisionado")
+
+	// O distrobox usa --userns keep-id, mapeando UID 0 no container para um
+	// subuid sem privilegios no host. Se o VS Code conectou como root antes do
+	// nameConfig existir no cliente, o .vscode-server fica com owner root e
+	// sessoes futuras como ale dao Permission denied. Este chown corrige isso.
+	reporter.Step(3, 3, "Corrigindo ownership do .vscode-server...")
+	vscodeDir := filepath.Join(homePath, ".vscode-server")
+	if sys.FileExists(vscodeDir) {
+		_, err = sys.Exec(ctx, "distrobox", "enter", "devbox", "--",
+			"sudo", "chown", "-R", "ale:ale", vscodeDir)
+		if err != nil {
+			reporter.Warn(fmt.Sprintf("chown .vscode-server falhou: %v", err))
+		} else {
+			reporter.Success(".vscode-server ownership corrigido")
+		}
+	} else {
+		reporter.Success(".vscode-server ainda nao existe (ok)")
+	}
+
+	reporter.Info("VS Code: rode em cada maquina cliente onde usa o VS Code:")
+	reporter.Info("  curl -fsSL https://raw.githubusercontent.com/ale/blueprint/main/scripts/vscode-devbox.sh | bash")
+	reporter.Info("Depois abra VS Code > Attach to Running Container > devbox")
 
 	return nil
 }

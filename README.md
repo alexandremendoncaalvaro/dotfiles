@@ -16,9 +16,11 @@ Já clonou? `make run` faz tudo.
 
 | Módulo | O que faz |
 |--------|-----------|
+| **devcontainers** | Habilita dev mode, troca Docker CE por `podman-docker` (requer reboot) |
+| **devbox** | Cria distrobox Ubuntu 24.04 com Node, Python, .NET, Java, Go, Rust via [mise](https://mise.run) |
 | **starship** | Instala o prompt [Starship](https://starship.rs), configura `.bashrc` e `.zshrc` |
 | **cedilla-fix** | Corrige cedilha (`ç`) no Wayland/GNOME via `~/.XCompose` |
-| **gnome-forge** | Auto-tiling com [Forge](https://github.com/forge-ext/forge). `Super+setas` = foco, `+Shift` = mover, `+Ctrl` = resize |
+| **tiling-shell** | Auto-tiling com [Tiling Shell](https://github.com/domferr/tilingshell) |
 | **clipboard-indicator** | Histórico de clipboard no GNOME com [Clipboard Indicator](https://github.com/Tudmotu/gnome-shell-extension-clipboard-indicator) |
 | **gnome-focus-mode** | `F11` = fullscreen + workspace exclusivo (estilo macOS) |
 | **bluefin-update** | Atualiza rpm-ostree, Flatpak, firmware e Distrobox |
@@ -43,6 +45,20 @@ O perfil é detectado automaticamente:
 | Sem sessão gráfica | `server` | Shell + sistema |
 
 Para forçar: `blueprint apply -p minimal`
+
+## VS Code + devbox
+
+O módulo **devbox** cria o container e provisiona todas as ferramentas. Para conectar com o VS Code via "Attach to Running Container", rode **em cada máquina cliente** (Mac, Linux ou Windows):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ale/blueprint/main/scripts/vscode-devbox.sh | bash
+```
+
+Isso cria um named container config que faz o VS Code conectar como `ale` (em vez de `root`). Só precisa rodar uma vez por máquina.
+
+Depois: **VS Code > Remote Explorer > Dev Containers > Attach to Running Container > devbox**
+
+> O blueprint mostra essa instrução automaticamente na tela de sumário ao aplicar o módulo devbox.
 
 ## Atualizar
 

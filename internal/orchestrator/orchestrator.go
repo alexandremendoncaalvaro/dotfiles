@@ -16,7 +16,24 @@ type Result struct {
 	Skipped bool
 	Reason  string
 	Err     error
+	Notes   []string // Instrucoes pos-apply exibidas no sumario final
 }
+
+// notingReporter captura mensagens Info como Notes alem de repassar ao reporter original.
+type notingReporter struct {
+	inner module.Reporter
+	notes []string
+}
+
+func (r *notingReporter) Info(msg string) {
+	r.notes = append(r.notes, msg)
+	r.inner.Info(msg)
+}
+
+func (r *notingReporter) Success(msg string)                   { r.inner.Success(msg) }
+func (r *notingReporter) Warn(msg string)                      { r.inner.Warn(msg) }
+func (r *notingReporter) Error(msg string)                     { r.inner.Error(msg) }
+func (r *notingReporter) Step(current, total int, msg string)  { r.inner.Step(current, total, msg) }
 
 // Orchestrator coordena a execucao de modulos.
 type Orchestrator struct {
@@ -112,12 +129,14 @@ func (o *Orchestrator) runOne(ctx context.Context, m module.Module) Result {
 	// 3. Apply: aplica mudancas
 	if applier, ok := m.(module.Applier); ok {
 		o.reporter.Info(fmt.Sprintf("%s: aplicando...", m.Name()))
-		if err := applier.Apply(ctx, o.sys, o.reporter); err != nil {
+		nr := &notingReporter{inner: o.reporter}
+		if err := applier.Apply(ctx, o.sys, nr); err != nil {
 			o.reporter.Error(fmt.Sprintf("%s: erro ao aplicar — %v", m.Name(), err))
 			result.Err = err
 			return result
 		}
 		result.Applied = true
+		result.Notes = nr.notes
 		o.reporter.Success(fmt.Sprintf("%s: aplicado com sucesso", m.Name()))
 	}
 
