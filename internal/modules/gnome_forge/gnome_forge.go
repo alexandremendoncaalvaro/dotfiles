@@ -17,34 +17,34 @@ const forgeUUID = "forge@jmmaranan.com"
 // Primeiro limpa os defaults do GNOME que conflitam.
 var forgeKeybindings = []gnome.DconfEntry{
 	// Desabilita defaults do GNOME que conflitam com Forge
-	{"/org/gnome/desktop/wm/keybindings/maximize", "@as []"},
-	{"/org/gnome/desktop/wm/keybindings/unmaximize", "@as []"},
-	{"/org/gnome/mutter/keybindings/toggle-tiled-left", "@as []"},
-	{"/org/gnome/mutter/keybindings/toggle-tiled-right", "@as []"},
+	{Path: "/org/gnome/desktop/wm/keybindings/maximize", Value: "@as []"},
+	{Path: "/org/gnome/desktop/wm/keybindings/unmaximize", Value: "@as []"},
+	{Path: "/org/gnome/mutter/keybindings/toggle-tiled-left", Value: "@as []"},
+	{Path: "/org/gnome/mutter/keybindings/toggle-tiled-right", Value: "@as []"},
 
 	// Foco: Super + setas
-	{"/org/gnome/shell/extensions/forge/keybindings/window-focus-left", "['<Super>Left']"},
-	{"/org/gnome/shell/extensions/forge/keybindings/window-focus-right", "['<Super>Right']"},
-	{"/org/gnome/shell/extensions/forge/keybindings/window-focus-up", "['<Super>Up']"},
-	{"/org/gnome/shell/extensions/forge/keybindings/window-focus-down", "['<Super>Down']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-focus-left", Value: "['<Super>Left']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-focus-right", Value: "['<Super>Right']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-focus-up", Value: "['<Super>Up']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-focus-down", Value: "['<Super>Down']"},
 
 	// Mover/swap: Super + Shift + setas
-	{"/org/gnome/shell/extensions/forge/keybindings/window-swap-left", "['<Super><Shift>Left']"},
-	{"/org/gnome/shell/extensions/forge/keybindings/window-swap-right", "['<Super><Shift>Right']"},
-	{"/org/gnome/shell/extensions/forge/keybindings/window-swap-up", "['<Super><Shift>Up']"},
-	{"/org/gnome/shell/extensions/forge/keybindings/window-swap-down", "['<Super><Shift>Down']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-swap-left", Value: "['<Super><Shift>Left']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-swap-right", Value: "['<Super><Shift>Right']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-swap-up", Value: "['<Super><Shift>Up']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-swap-down", Value: "['<Super><Shift>Down']"},
 
 	// Resize: Super + Ctrl + setas
-	{"/org/gnome/shell/extensions/forge/keybindings/window-resize-left", "['<Super><Control>Left']"},
-	{"/org/gnome/shell/extensions/forge/keybindings/window-resize-right", "['<Super><Control>Right']"},
-	{"/org/gnome/shell/extensions/forge/keybindings/window-resize-up", "['<Super><Control>Up']"},
-	{"/org/gnome/shell/extensions/forge/keybindings/window-resize-down", "['<Super><Control>Down']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-resize-left", Value: "['<Super><Control>Left']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-resize-right", Value: "['<Super><Control>Right']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-resize-up", Value: "['<Super><Control>Up']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/window-resize-down", Value: "['<Super><Control>Down']"},
 
 	// Split toggle: Super + g
-	{"/org/gnome/shell/extensions/forge/keybindings/con-split-layout-toggle", "['<Super>g']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/con-split-layout-toggle", Value: "['<Super>g']"},
 
 	// Toggle tiling: Super + y
-	{"/org/gnome/shell/extensions/forge/keybindings/prefs-tiling-toggle", "['<Super>y']"},
+	{Path: "/org/gnome/shell/extensions/forge/keybindings/prefs-tiling-toggle", Value: "['<Super>y']"},
 }
 
 // Module implementa auto-tiling com Forge.

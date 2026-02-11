@@ -12,6 +12,8 @@ import (
 	"github.com/ale/blueprint/internal/modules/bluefin_update"
 	"github.com/ale/blueprint/internal/modules/cedilla"
 	"github.com/ale/blueprint/internal/modules/clipboard_indicator"
+	"github.com/ale/blueprint/internal/modules/devbox"
+	"github.com/ale/blueprint/internal/modules/devcontainers"
 	"github.com/ale/blueprint/internal/modules/gnome_focus"
 	"github.com/ale/blueprint/internal/modules/gnome_forge"
 	"github.com/ale/blueprint/internal/modules/passwordless"
@@ -42,6 +44,10 @@ func main() {
 	must(reg.Register(bluefin_update.New()))
 	must(reg.Register(passwordless.New()))
 	must(reg.Register(usb_audio.New()))
+	must(reg.Register(devcontainers.New()))
+
+	devboxScript := filepath.Join(repoDir, "configs", "devbox", "setup-dev.sh")
+	must(reg.Register(devbox.New(devboxScript)))
 
 	// Configura a app
 	app := &cli.App{
