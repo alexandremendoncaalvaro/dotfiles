@@ -26,6 +26,9 @@ type Mock struct {
 	// Container define se esta em container
 	Container bool
 
+	// WSL define se esta no WSL
+	WSL bool
+
 	// EnvVars simula variaveis de ambiente
 	EnvVars map[string]string
 
@@ -137,6 +140,10 @@ func (m *Mock) HomeDir() string {
 
 func (m *Mock) IsContainer() bool {
 	return m.Container
+}
+
+func (m *Mock) IsWSL() bool {
+	return m.WSL
 }
 
 func (m *Mock) Env(key string) string {

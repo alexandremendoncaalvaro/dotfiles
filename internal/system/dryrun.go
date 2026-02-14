@@ -40,6 +40,7 @@ func (d *DryRun) FileExists(path string) bool        { return d.inner.FileExists
 func (d *DryRun) ReadFile(path string) ([]byte, error) { return d.inner.ReadFile(path) }
 func (d *DryRun) HomeDir() string                     { return d.inner.HomeDir() }
 func (d *DryRun) IsContainer() bool                   { return d.inner.IsContainer() }
+func (d *DryRun) IsWSL() bool                         { return d.inner.IsWSL() }
 func (d *DryRun) Env(key string) string               { return d.inner.Env(key) }
 func (d *DryRun) CommandExists(name string) bool       { return d.inner.CommandExists(name) }
 

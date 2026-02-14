@@ -93,6 +93,15 @@ func (r *Real) IsContainer() bool {
 	return false
 }
 
+func (r *Real) IsWSL() bool {
+	data, err := os.ReadFile("/proc/version")
+	if err != nil {
+		return false
+	}
+	content := strings.ToLower(string(data))
+	return strings.Contains(content, "microsoft")
+}
+
 func (r *Real) Env(key string) string {
 	return os.Getenv(key)
 }

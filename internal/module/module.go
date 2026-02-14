@@ -39,6 +39,9 @@ type System interface {
 	// IsContainer retorna true se estiver rodando dentro de um container.
 	IsContainer() bool
 
+	// IsWSL retorna true se estiver rodando dentro do WSL.
+	IsWSL() bool
+
 	// Env retorna o valor de uma variavel de ambiente.
 	Env(key string) string
 
