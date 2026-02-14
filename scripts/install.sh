@@ -36,6 +36,13 @@ check_prereqs() {
     command -v make &>/dev/null || missing+=(make)
 
     if [[ ${#missing[@]} -gt 0 ]]; then
+        # Tenta automagica no apt (comum em WSL/Ubuntu)
+        if command -v apt-get &>/dev/null; then
+             info "Instalando dependencias faltantes: ${missing[*]}..."
+             sudo apt-get update && sudo apt-get install -y "${missing[@]}" || fail "Falha ao instalar dependencias"
+             return
+        fi
+
         fail "Faltam dependências: ${missing[*]}. Instale e rode novamente."
     fi
 }

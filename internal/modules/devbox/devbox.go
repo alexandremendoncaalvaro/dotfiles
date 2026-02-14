@@ -59,10 +59,26 @@ func hasContainer(output, name string) bool {
 }
 
 func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.Reporter) error {
+	// No WSL, Docker tem problemas com mounts. Forcamos o uso do Podman.
+	usePodman := sys.IsWSL()
+	if usePodman {
+		if !sys.CommandExists("podman") {
+			reporter.Step(0, 3, "Instalando Podman (necessario para WSL)...")
+			// Assume apt-get pois WSL geralmente e Ubuntu/Debian
+			if _, err := sys.Exec(ctx, "sudo", "apt-get", "update"); err != nil {
+				reporter.Warn("apt-get update falhou")
+			}
+			if _, err := sys.Exec(ctx, "sudo", "apt-get", "install", "-y", "podman"); err != nil {
+				return fmt.Errorf("erro ao instalar podman: %w. Por favor instale manualmente", err)
+			}
+			reporter.Success("Podman instalado")
+		}
+	}
+
 	reporter.Step(1, 3, "Criando container devbox...")
 	
-	args := []string{
-		"create",
+	baseArgs := []string{
+		"distrobox", "create",
 		"--name", "devbox",
 		"--image", "quay.io/toolbx/ubuntu-toolbox:24.04",
 		"--yes",
@@ -72,10 +88,18 @@ func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.R
 	// Usamos o home padrao do host.
 	if !sys.IsWSL() {
 		homePath := filepath.Join(sys.HomeDir(), ".distrobox", "devbox")
-		args = append(args, "--home", homePath)
+		baseArgs = append(baseArgs, "--home", homePath)
 	}
 
-	_, err := sys.Exec(ctx, "distrobox", args...)
+	var err error
+	if usePodman {
+		// Enforce podman via variavel de ambiente
+		cmd := fmt.Sprintf("DBX_CONTAINER_MANAGER=podman %s", strings.Join(baseArgs, " "))
+		_, err = sys.Exec(ctx, "sh", "-c", cmd)
+	} else {
+		_, err = sys.Exec(ctx, baseArgs[0], baseArgs[1:]...)
+	}
+
 	if err != nil {
 		// Ignora erro se o container ja existe
 		reporter.Warn(fmt.Sprintf("distrobox create retornou erro (container pode ja existir): %v", err))
