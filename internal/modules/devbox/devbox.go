@@ -60,12 +60,22 @@ func hasContainer(output, name string) bool {
 
 func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.Reporter) error {
 	reporter.Step(1, 3, "Criando container devbox...")
-	homePath := filepath.Join(sys.HomeDir(), ".distrobox", "devbox")
-	_, err := sys.Exec(ctx, "distrobox", "create",
+	
+	args := []string{
+		"create",
 		"--name", "devbox",
 		"--image", "quay.io/toolbx/ubuntu-toolbox:24.04",
-		"--home", homePath,
-		"--yes")
+		"--yes",
+	}
+
+	// No WSL, --home customizado em volume montado causa erro de "not a shared mount".
+	// Usamos o home padrao do host.
+	if !sys.IsWSL() {
+		homePath := filepath.Join(sys.HomeDir(), ".distrobox", "devbox")
+		args = append(args, "--home", homePath)
+	}
+
+	_, err := sys.Exec(ctx, "distrobox", args...)
 	if err != nil {
 		// Ignora erro se o container ja existe
 		reporter.Warn(fmt.Sprintf("distrobox create retornou erro (container pode ja existir): %v", err))
@@ -81,12 +91,18 @@ func (m *Module) Apply(ctx context.Context, sys module.System, reporter module.R
 	}
 	reporter.Success("Devbox provisionado")
 
+	// Determina o caminho do home usado para o container
+	containerHome := sys.HomeDir()
+	if !sys.IsWSL() {
+		containerHome = filepath.Join(sys.HomeDir(), ".distrobox", "devbox")
+	}
+
 	// O distrobox usa --userns keep-id, mapeando UID 0 no container para um
 	// subuid sem privilegios no host. Se o VS Code conectou como root antes do
 	// nameConfig existir no cliente, o .vscode-server fica com owner root e
 	// sessoes futuras como ale dao Permission denied. Este chown corrige isso.
 	reporter.Step(3, 3, "Corrigindo ownership do .vscode-server...")
-	vscodeDir := filepath.Join(homePath, ".vscode-server")
+	vscodeDir := filepath.Join(containerHome, ".vscode-server")
 	if sys.FileExists(vscodeDir) {
 		_, err = sys.Exec(ctx, "distrobox", "enter", "devbox", "--",
 			"sudo", "chown", "-R", "ale:ale", vscodeDir)
