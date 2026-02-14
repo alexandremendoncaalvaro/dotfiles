@@ -12,7 +12,15 @@ set -euo pipefail
 #   ./scripts/install.sh
 
 REPO="https://github.com/ale/blueprint.git"
-INSTALL_DIR="${BLUEPRINT_DIR:-$HOME/blueprint}"
+# Se estamos rodando de dentro de um clone, usa o dir atual. Senao, usa ~/blueprint.
+CURRENT_GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [[ -n "$CURRENT_GIT_ROOT" ]]; then
+    DEFAULT_INSTALL_DIR="$CURRENT_GIT_ROOT"
+else
+    DEFAULT_INSTALL_DIR="$HOME/blueprint"
+fi
+
+INSTALL_DIR="${BLUEPRINT_DIR:-$DEFAULT_INSTALL_DIR}"
 LOCAL_BIN="$HOME/.local/bin"
 
 info() { printf '\033[1;34m  ·\033[0m %s\n' "$*"; }
@@ -139,8 +147,9 @@ main() {
     ok "Tudo pronto. Abrindo TUI..."
     echo
 
-    # Sem argumento: a CLI detecta o perfil automaticamente
-    exec blueprint apply
+    # Garante que usamos o binario que acabamos de compilar
+    export BLUEPRINT_DIR="$INSTALL_DIR"
+    exec "$INSTALL_DIR/bin/blueprint" apply
 }
 
 main "$@"
