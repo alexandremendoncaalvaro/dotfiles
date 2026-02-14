@@ -10,6 +10,7 @@ func TestByName_ValidProfiles(t *testing.T) {
 		{"full", "full"},
 		{"minimal", "minimal"},
 		{"server", "server"},
+		{"wsl", "wsl"},
 	}
 
 	for _, tt := range tests {
@@ -34,8 +35,8 @@ func TestByName_InvalidProfile(t *testing.T) {
 
 func TestAll_ReturnsAllProfiles(t *testing.T) {
 	profiles := All()
-	if len(profiles) != 3 {
-		t.Fatalf("esperava 3 perfis, obteve %d", len(profiles))
+	if len(profiles) != 4 {
+		t.Fatalf("esperava 4 perfis, obteve %d", len(profiles))
 	}
 
 	names := map[string]bool{}
@@ -43,7 +44,7 @@ func TestAll_ReturnsAllProfiles(t *testing.T) {
 		names[p.Name] = true
 	}
 
-	for _, name := range []string{"full", "minimal", "server"} {
+	for _, name := range []string{"full", "minimal", "server", "wsl"} {
 		if !names[name] {
 			t.Errorf("perfil %s ausente em All()", name)
 		}

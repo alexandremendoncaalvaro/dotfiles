@@ -17,6 +17,18 @@ func TestDetect_Container(t *testing.T) {
 	}
 }
 
+func TestDetect_WSL(t *testing.T) {
+	mock := system.NewMock()
+	mock.WSL = true
+	// Mesmo com display vazio (que seria server), WSL deve ganhar
+	mock.EnvVars["DISPLAY"] = ""
+
+	got := Detect(mock)
+	if got.Name != "wsl" {
+		t.Errorf("WSL deveria retornar wsl, obteve %s", got.Name)
+	}
+}
+
 func TestDetect_NoDisplay(t *testing.T) {
 	mock := system.NewMock()
 	// Sem DISPLAY e sem WAYLAND_DISPLAY
