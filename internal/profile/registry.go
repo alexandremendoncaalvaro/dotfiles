@@ -26,11 +26,18 @@ var (
 		Tags:        []string{"shell", "system"},
 		ExcludeTags: []string{"desktop"},
 	}
+
+	WSL = Profile{
+		Name:        "wsl",
+		Description: "Ambiente WSL2 (shell + containers)",
+		Tags:        []string{"shell", "wsl"},
+		ExcludeTags: []string{"desktop", "system"},
+	}
 )
 
 // All retorna todos os perfis disponiveis.
 func All() []Profile {
-	return []Profile{Full, Minimal, Server}
+	return []Profile{Full, Minimal, Server, WSL}
 }
 
 // ByName busca um perfil pelo nome.

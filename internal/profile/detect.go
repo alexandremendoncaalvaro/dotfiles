@@ -6,11 +6,16 @@ import "github.com/ale/blueprint/internal/module"
 //
 // Regras:
 //   - Container → minimal (sem desktop, sem system — só shell)
+//   - WSL → wsl (shell + containers, sem desktop/system)
 //   - Sem sessão gráfica ($DISPLAY e $WAYLAND_DISPLAY vazios) → server
 //   - Todo o resto → full
 func Detect(sys module.System) Profile {
 	if sys.IsContainer() {
 		return Minimal
+	}
+
+	if sys.IsWSL() {
+		return WSL
 	}
 
 	if sys.Env("DISPLAY") == "" && sys.Env("WAYLAND_DISPLAY") == "" {
