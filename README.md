@@ -5,7 +5,7 @@ Configurações para [Bluefin](https://projectbluefin.io) (Fedora Atomic). Roda 
 ## Instalar
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/ale/blueprint/main/scripts/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/alexandremendoncaalvaro/blueprint/refs/heads/main/scripts/install.sh)"
 ```
 
 Isso clona o repositório, instala Go via `brew` se necessário, compila e abre o TUI.
